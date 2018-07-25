@@ -19,10 +19,12 @@ package docker
 import (
 	"context"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
 	cstorage "cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/cloud-builders/gcs-fetcher/pkg/uploader"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/util"
 	"github.com/pkg/errors"
 )
@@ -74,3 +76,50 @@ func UploadContextToGCS(ctx context.Context, context, dockerfilePath, bucket, ob
 	}
 	return w.Close()
 }
+
+func IncrementallyUploadContextToGCS(ctx context.Context, context, dockerfilePath, bucket string) (string, error) {
+	c, err := cstorage.NewClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer c.Close()
+
+	manifestObject := "manifest.json" // TODO: generate unique name.
+	up := uploader.New(ctx, realGCS{c}, realOS{}, bucket, manifestObject, 10)
+
+	// Enqueue dependency paths.
+	paths, err := GetDependencies(map[string]*string{}, context, dockerfilePath)
+	for _, p := range paths {
+		slashPath := filepath.ToSlash(p)
+
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(context, p)
+		}
+		info, err := os.Stat(p)
+		if err != nil {
+			return "", err
+		}
+		up.Enqueue(slashPath, info)
+	}
+
+	// Wait for all workers to finish, or for some error.
+	if err := up.Wait(ctx); err != nil {
+		return "", err
+	}
+	return manifestObject, nil
+}
+
+// realGCS is a wrapper over the GCS client functions.
+type realGCS struct{ client *cstorage.Client }
+
+func (gp realGCS) NewWriter(ctx context.Context, bucket, object string) io.WriteCloser {
+	return gp.client.Bucket(bucket).Object(object).
+		If(cstorage.Conditions{DoesNotExist: true}). // Skip upload if already exists.
+		NewWriter(ctx)
+}
+
+// realOS merely wraps the os package implementations.
+type realOS struct{}
+
+func (realOS) EvalSymlinks(path string) (string, error) { return filepath.EvalSymlinks(path) }
+func (realOS) Stat(path string) (os.FileInfo, error)    { return os.Stat(path) }

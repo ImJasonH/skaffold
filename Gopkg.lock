@@ -35,6 +35,15 @@
   version = "v10.11.2"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/GoogleCloudPlatform/cloud-builders"
+  packages = [
+    "gcs-fetcher/pkg/common",
+    "gcs-fetcher/pkg/uploader"
+  ]
+  revision = "8cf67a719100e089781402e40a919df1a4f571f0"
+
+[[projects]]
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   revision = "7da180ee92d8bd8bb8c37fc560e673e6557c392f"
@@ -386,8 +395,8 @@
 [[projects]]
   name = "github.com/modern-go/reflect2"
   packages = ["."]
-  revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
-  version = "1.0.0"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -949,6 +958,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2f20762e774baeea8657ad1c449e834474a0e8219b59856f02ed5d6472c86b9b"
+  inputs-digest = "2e2a96e4fc7377d0a458370c814880fb516571a4c15588b080eb3c1797bc1f90"
   solver-name = "gps-cdcl"
   solver-version = 1
